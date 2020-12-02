@@ -16,7 +16,7 @@ void make_mission_point(std::vector<Mission::MissionItem> &mission_items, double
     mission_item.latitude_deg = x;    // 범위: -90 to +90
     mission_item.longitude_deg = y;    // 범위: -180 to +180
     mission_item.relative_altitude_m = 10.0f;    // takeoff altitude
-    mission_item.speed_m_s = 27.77777777777777777777777777778f; //단위 m/s, 시속 100km/s
+    mission_item.speed_m_s = 10.0f; //단위 m/s
     mission_item.is_fly_through = true;   
     mission_items.push_back(mission_item);
 }
@@ -33,8 +33,8 @@ void collision_avoidance_point(std::vector<Mission::MissionItem> &mission_items,
     double tmp_x, tmp_y, r=radius_avoidance;  // 원의 임시 포인트와 반지름(물체 중심점과 유지하는 거리)
 
     for(int i=0; i<max+1; i++){
-        tmp_x = point_x_obstacle + r*sin(seta + i*PI/max ); // 한바퀴면 (360*i/max) * PI / 180
-        tmp_y = point_y_obstacle + 1.5*r*cos(seta + i*PI/max ); // 하지만 반바퀴이므로 (180*i/max) * PI / 180
+        tmp_x = point_x_obstacle - r*sin(seta + i*PI/max ); // 한바퀴면 (360*i/max) * PI / 180
+        tmp_y = point_y_obstacle - 1.3*r*cos(seta + i*PI/max ); // 하지만 반바퀴이므로 (180*i/max) * PI / 180
         make_mission_point(mission_items, tmp_x, tmp_y);
     }
 }
@@ -93,14 +93,17 @@ int main(int argc, char** argv)
     const double center_lat=lat, center_lon=lon; // 기준점, 현재 위치의 좌표를 받아 기준점을 만든다.
 
     // 삼각 형태의 포인트
-    double point_x1 = center_lat         , point_y1 = center_lon + 0.0005;  // first point
-    double point_x2 = center_lat + 0.0005, point_y2 = center_lon         ;  // second point
-    double point_x3 = center_lat         , point_y3 = center_lon - 0.0005;  // second point
+    double point_x1 = center_lat         , point_y1 = center_lon - 0.0007;  // first point
+    double point_x2 = center_lat + 0.0007, point_y2 = center_lon         ;  // second point
+    double point_x3 = center_lat         , point_y3 = center_lon + 0.0007;  // third point
     // 장애물 포인트, 임시로 포인트1과 포인트2 사이에 지정
     double point_x_obstacle = point_x1 + 0.5*(point_x2 - point_x1), point_y_obstacle = point_y1 + 0.5*(point_y2 - point_y1);  
     //기본 삼각형 비행, point1과 point2 사이에 장애물
     make_mission_point(mission_items, point_x1, point_y1);  //삼각형 point1
     double seta = atan((point_y1-point_y_obstacle)/(point_x1-point_x_obstacle));    // 진입각도 계산, radian
+    if ((point_x1-point_x_obstacle)<0){
+        seta += PI; // arctan의 범위는 -90~90도이기 때문에 1, 4 사분면에서 진입하는 것은 문제 없지만 2,3 사분면에서 집입하는것에 대한 처리를 해주어야 한다.
+    }
     collision_avoidance_point(mission_items, point_x_obstacle, point_y_obstacle, seta); // 장애물 회피
     make_mission_point(mission_items, point_x2, point_y2);  //삼각형 point2
     make_mission_point(mission_items, point_x3, point_y3);  //삼각형 point3
